@@ -45,14 +45,42 @@ Below are explanations of the functions available in each class.
 * invert(invert)
 
 ## KitronikRTC
-* setDate(day, month, year)
-* setTime(hours, minutes, seconds)
-* readDateString()
-* readTimeString()
-* readParameter(parameter) - d, m, y, h, min, s
-* setAlarm(hour, minute)
-* checkAlarm()
-* silenceAlarm()
+The Pico has an onboard RTC (Real-Time Clock) which has a very simple user interface enabling the setting or reading of the date and time.  
+The KitronikRTC class expands this functionality, allowing separate setting of date and time, reading the date and time out as strings, reading individual date/time parameters and the ability to set alarms  
+Set the date and time:  
+```python
+rtc.setDate(day, month, year)
+rtc.setTime(hours, minutes, seconds)
+```
+Read the date and time as strings:  
+```python
+rtc.readDateString()    # DD/MM/YY
+rtc.readTimeString()    # HH:MM:SS
+```
+Read individual date or time parameters:  
+```python
+rtc.readParameter(parameter)
+```
+'parameter' can be:  
+* 'd' = Day
+* 'm' = Month
+* 'y' = Year
+* 'h' = Hour
+* 'min' = Minute
+* 's' = Second
+  
+Set an alarm:
+```python
+rtc.setAlarm(hour, minute)
+```
+Check whether an alarm time condition has been met - this function returns 'True' if the alarm is triggered:  
+```python
+rtc.checkAlarm()
+```
+Stop the alarm triggering once the time condition has been met:  
+```python
+rtc.silenceAlarm()
+```
 
 ## KitronikZIPLEDs
 ZIP LEDs have a 2 stage operation...
@@ -87,9 +115,19 @@ zipleds.show():
 ```
 
 ## KitronikBuzzer
-* playTone(freq)
-* playTone_Length(freq, length)
-* stopTone()
+The piezo buzzer on the board can play single frequency tones, with the pitch and tone length controlled by the following functions.  
+Play a continous tone at a set frequency (in the range 30Hz to 3kHz):  
+```python
+buzzer.playTone(freq)
+```
+Play a tone at a set frequency for a set length of time (in milliseconds):  
+```python
+buzzer.playTone_Length(freq, length)
+```
+Stop the current tone sounding:  
+```python
+buzzer.stopTone()
+```
 
 ## KitronikDataLogger
 * On class instantiation, creates file with input name and assigns the separator between data fields
