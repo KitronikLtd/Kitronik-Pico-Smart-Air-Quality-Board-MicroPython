@@ -136,9 +136,9 @@ On class instantiation, a file is created with the chosen name and a chosen sepa
 log = KitronikDataLogger(filename, separator)
 ```
 There are three options for the data separator:  
-* "comma" = '**,**''
-* "semicolon" = '**;**''
-* "tab" = '    '
+* "comma" = '**,**'
+* "semicolon" = '**;**
+* "tab" = '&nbsp;&nbsp;&nbsp;&nbsp;'
 There are two blocks which are used to setup the data log file with some extra information:  
 ```python
 log.writeProjectInfo(name, subject)
