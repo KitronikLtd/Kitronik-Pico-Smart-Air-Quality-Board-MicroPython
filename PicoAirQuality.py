@@ -719,7 +719,8 @@ class KitronikBME688:
     # Setup the gas sensor (defaults are 300°C and 150ms).
     # targetTemp is the target temperature for the gas sensor plate to reach (200 - 400°C), eg: 300
     # heatDuration is the length of time for the heater to be turned on (0 - 4032ms), eg: 150
-    def setupGasSensor(self, targetTemp=300, heatDuration=150):
+    #def setupGasSensor(self, targetTemp=300, heatDuration=150):
+    def setupGasSensor(self):
         if (self.bme688InitFlag == False):
             self.bme688Init()
 

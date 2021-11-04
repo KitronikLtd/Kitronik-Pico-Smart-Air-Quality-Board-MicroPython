@@ -19,30 +19,88 @@ There are several classes within the module for accessing and controlling the di
 Below are explanations of the functions available in each class.  
 
 ## KitronikBME688
-* Class instantiation reads and sets up all calibration parameters for compensation calculations
-* setupGasSensor(targetTemp=300, heatDuration=150)
-* calcBaselines()
-* measureData()
-* readTemperature(temperature_unit="C")
-* readPressure(pressure_unit="Pa")
-* readHumidity()
-* readGasRes()
-* readeCO2() - calls calcAirQuality()
-* getAirQualityPercent() - calls calcAirQuality()
-* getAirQualityScore() - calls calcAirQuality()
+The BME688 sensor is the main feature of the board, enabling measurements of:  
+* Temperature
+* Pressure
+* Humidity
+* Index of Air Quality (IAQ)
+* Estimated CO2 (eCO2)
+
+Class instantiation reads and sets up all the calibration parameters for different calculations, creates all the class variables and sets up the default settings on the BME688 sensor.  
+After this process, the temperature, pressure and humidity sensors will be able to be used immediately, but the gas sensor - which provides the IAQ and eCO2 outputs - needs some further setup:  
+```python
+bme688.setupGasSensor()
+bme688.calcBaselines()
+```
+These functions set the temperature and 'on' time for the gas sensor plate, and then run a 5 minute process measuring gas resistance and ambient temperature and then calculating mean values - these are then used as baselines for future calculations.  
+To actually run the measurement process, call:  
+```python
+bme688.measureData()
+```
+This function will take readings from all the sensor outputs and run any required compensation calculations, but further functions are needed for extracting the final values in a useable format:  
+```python
+bme688.readTemperature(temperature_unit="C")    # The default unit is degC, but can be changed to degF by calling "F".
+bme688.readPressure(pressure_unit="Pa")         # The default unit is Pascals ("Pa"), but can be changed to millibar by calling "mBar".
+bme688.readHumidity()       # Outputs relativy humidity as a %.
+bme688.readeCO2()       # An estimated value based on gas resistance, temperature and humidity - outputs a value in parts per million (ppm).
+bme688.getAirQualityPercent()   # A relative value based on gas resistance and humidity - outputs as a %.
+bme688.getAirQualityScore()     # A relative value based on gas resistance and humidty - outputs as a value on a 0 - 500 scale, where 0 = Excellent and 500 = Extremely Poor
+```
 
 ## KitronikOLED
-* Class instantiation sets up defaults for the screen, including the correct orientation
-* displayText(text, line, x_offset=0)
-* show()
-* plot(variable)
-* drawLine(start_x, start_y, end_x, end_y)
-* drawRect(start_x, start_y, width, height, fill=False)
+The OLED screen provides a way for adding useful visual outputs to programs and projects. The screen can display text, numbers, lines, shapes and simple graphs.  
+Class instantiation sets up the default settings for the screen, including the correct orientation for the Pico being at the bottom edge of the board.  
+To display text (or numbers converted to strings with the 'str(*numbers*)'):  
+```python
+oled.displayText(text, line, x_offset=0)
+```
+The text can be displayed on any of the 6 lines (1 - 6), with up to 16 characters per line. Text will default to start showing on the left edge of the screen, but by setting an 'x_offset' by a certain number of pixels it can start anywhere across the screen (the screen is 128px wide). **Note:** If the text is too long for a line, the end characters will be cut off, they will not move down to the next line.  
+To make the text actually appear, another function needs to be called:  
+```python
+oled.show()
+```
+This function needs to be called to make all changes visible, so must be called after:  
+* displayText()
+* drawLine()
+* drawRect()
+* plot()
 * clear()
-* poweroff()
-* poweron()
-* contrast(contrast)
-* invert(invert)
+  
+To draw a line from a starting (x, y) coordinate to an end (x, y) coordinate:  
+```python
+oled.drawLine(start_x, start_y, end_x, end_y)
+```
+**Note:** The screen is 128px wide by 64px high.
+To draw a rectangle:  
+```python
+oled.drawRect(start_x, start_y, width, height, fill=False)
+```
+The starting (x, y) coordinate is always the top left corner, then a width and height in pixels can be set. By default the rectangle will just be a border, but by setting 'fill' to **True**, the rectangle will be completely filled in.  
+To plot a simple, single variable graph:
+```python
+oled.plot(variable)
+```
+If the function is called repeatedly (for example, in a 'while True' loop) then a variable (such as a sensor reading) can be plotted live on the OLED screen. The top line is left free for adding other text or graphics.  
+To clear the screen (removing the display data from the software buffer):  
+```python
+oled.clear()
+```
+To turn off the screen, without losing the display data:
+```python
+oled.poweroff()
+```
+To turn the screen on, returning to whatever was previously displayed (or something new):  
+```python
+oled.poweron()
+```
+To alter the contrast of the displayed graphics with the background (i.e. make things brighter or darker):  
+```python
+oled.contrast(contrast)     # 0 = Dim to 150 = Bright
+```
+To invert the display colours (switch the background and graphic display colours):
+```python
+oled.invert(invert)     # 0 = White on black, 1 = Black on white
+```
 
 ## KitronikRTC
 The Pico has an onboard RTC (Real-Time Clock) which has a very simple user interface enabling the setting or reading of the date and time.  
@@ -188,7 +246,7 @@ If the pin is needed for another purpose it can be 'deregistered' which sets the
 output.deregisterServo()
  ```
 
-### High-Power Outputs
+### High-Power Outputs:
 The high-power outputs on the board are controlled via two pins on the Pico: GP3 and GP15.  
 The control of these outputs is very simple, either setting them to be **ON** or **OFF**:  
 ```python
