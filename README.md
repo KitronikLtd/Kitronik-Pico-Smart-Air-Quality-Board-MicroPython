@@ -130,13 +130,46 @@ buzzer.stopTone()
 ```
 
 ## KitronikDataLogger
-* On class instantiation, creates file with input name and assigns the separator between data fields
-* Max file size set to 500000 (approx. 10000 entries)
-* writeProjectInfo(name, subject)
-* setupDataFields(field1 - field10)
-* storeDataEntry(field1 - field10) - checks for file size and removes lines if neccessary
-* eraseAllData()
- * deleteDataFile()
+The data logging functionality is one of the key features of the board as it enables the data captured from the sensors to be saved for later manipulation and analysis.  
+On class instantiation, a file is created with the chosen name and a chosen separator between the data fields is assigned:  
+```python
+log = KitronikDataLogger(filename, separator)
+```
+There are three options for the data separator:  
+* "comma" = '**,**''
+* "semicolon" = '**;**''
+* "tab" = '    '
+There are two blocks which are used to setup the data log file with some extra information:  
+```python
+log.writeProjectInfo(name, subject)
+log.setupDataFields(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10)
+```
+The first writes a standard header line to the file, and then allows two user-entered fields, designated here as 'name' and 'subject'.  
+The second allows the user to include up to 10 data field headings which can then need to be matched to the order of the data fields in the data entry (these headings will become column headings if the data is imported to a spreadsheet program).  
+With these sections included, the start of a log file will look something like this:  
+```
+Kitronik Data Logger - Pico Smart Air Quality Board - www.kitronik.co.uk
+Name: User Name
+Subject: Project 1
+Date;Time;Temperature;Pressure;Humidity;Soil Moisture;IAQ;eCO2;
+```
+To actually save data to the log file, use the following function:  
+```python
+log.storeDataEntry(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10)
+```
+**Note:** Data needs to be entered in string format (numbers can be easily converted with the 'str(*number*)' function).  
+There are 10 data fields available per data entry, which allows, for example: Date, Time, Temperature, Pressure, Humidity, IAQ, eCO2 + 3 others (e.g. external sensors).  
+There is a maximum file size of 500kB for the log file to make sure there is always enough space on the Pico flash. During the process of saving the data to the file, if the file will exceed the maximum size, the earliest data entry will be deleted to make space for the newest one.  
+
+There are two options for deleting data stored on the Pico.  
+The log file contents can be erased:  
+```python
+logeraseAllData()
+```
+Or the log file itself can be deleted:  
+```python
+ log.deleteDataFile()
+ ```
 
 ## KitronikOutputControl
 ### Servo:
