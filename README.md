@@ -137,7 +137,7 @@ log = KitronikDataLogger(filename, separator)
 ```
 There are three options for the data separator:  
 * "comma" = '**,**'
-* "semicolon" = '**;**
+* "semicolon" = '**;**'
 * "tab" = '&nbsp;&nbsp;&nbsp;&nbsp;'
 There are two blocks which are used to setup the data log file with some extra information:  
 ```python
@@ -174,34 +174,37 @@ Or the log file itself can be deleted:
 ## KitronikOutputControl
 ### Servo:
 The servo PWM (20ms repeat, on period capped between 500 and 2500us) is driven using the Pico PIO.  
-The servos are registered automatically in the initalisation of the class.   
-This process sets the PIO PWM active on the servo pin.  
-If the pin is needed for another purpose it can be 'deregistered' which sets the PIO to inactive.  
- ```python
-    robot.deregisterServo(servo)
- ```
-To re-register a servo after it has been de-registered:  
+To register a servo ready to be used:  
 ```python
-    robot.registerServo(servo)
+ output.registerServo()
 ```
-where:
-* servo => the servo number (0-3)
+This process sets the PIO PWM active on the servo pin.  
+To control the movement of a servo, turning it to a set angle (or controlling the speed/direction of a continuous rotation servo):  
+```python
+output.servoToPosition(degrees)
+```
+If the pin is needed for another purpose it can be 'deregistered' which sets the PIO to inactive:  
+ ```python
+output.deregisterServo()
+ ```
 
 ### High-Power Outputs
-* Pins GP3 and GP15 are assigned as high-power outputs
-* highPowerOn(pin)
-* highPowerOff(pin)
+The high-power outputs on the board are controlled via two pins on the Pico: GP3 and GP15.  
+The control of these outputs is very simple, either setting them to be **ON** or **OFF**:  
+```python
+output.highPowerOn(pin)
+output.highPowerOff(pin)
+```
+(*pin* is either '3' or '15')  
 
 ## KitronikButton
-* Class initialises two buttons (buttonA and buttonB) which can then be accessed in the main program file.
-* They require an interrupt (IRQ) and a handler to be created.
-
+On class instantiation, two buttons ('buttonA' and 'buttonB') are created which can then be accessed and used in the main program file.  
+One method of utilising the buttons is with interrupts (IRQs) and interrupt handlers - some examples are shown below.  
 ### Button IRQ:
 ```python
 buttons.buttonA.irq(trigger=machine.Pin.IRQ_RISING, handler=ButtonA_IRQHandler)
 buttons.buttonB.irq(trigger=machine.Pin.IRQ_RISING, handler=ButtonB_IRQHandler)
 ```
-
 ### Button IRQ Handler:
 ```python
 def ButtonA_IRQHandler(pin):
@@ -213,20 +216,14 @@ def ButtonA_IRQHandler(pin):
     oled.displayText("IAQ: " + str(bme688.getAirQualityScore()), 5)
     oled.displayText("eCO2: " + str(bme688.readeCO2()), 6)
     oled.show()
-    zipleds.setLED(0, zipleds.RED)
-    zipleds.setLED(2, zipleds.GREEN)
-    zipleds.setBrightness(50)
-    zipleds.show()
     
 def ButtonB_IRQHandler(pin):
     oled.clear()
     oled.show()
-    zipleds.clear(0)
-    zipleds.clear(2)
-    zipleds.show()
 ```
 
 # Troubleshooting
 
-This code is designed to be used as a module. See: https://kitronik.co.uk/blogs/resources/modules-micro-python-and-the-raspberry-pi-pico for more information
+This code is designed to be used as a module.  
+See: https://kitronik.co.uk/blogs/resources/modules-micro-python-and-the-raspberry-pi-pico for more information.  
 
