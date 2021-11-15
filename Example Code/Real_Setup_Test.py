@@ -17,8 +17,8 @@ log = KitronikDataLogger(logFileName, "semicolon")
 output = KitronikOutputControl()
 buttons = KitronikButton()
 
-rtc.setDate(29, 10, 2021)
-rtc.setTime(16, 30, 0)
+rtc.setDate(15, 11, 2021)
+rtc.setTime(15, 30, 0)
 
 # Button A will display the current date and time and some key measurement data on the OLED screen and turn on some onbaord ZIP LEDs
 def ButtonA_IRQHandler(pin):
@@ -38,7 +38,8 @@ def ButtonA_IRQHandler(pin):
 def ButtonB_IRQHandler(pin):
     oled.clear()
     oled.show()
-    zipleds.clear()
+    for led in range(8):
+        zipleds.clear(led)
     zipleds.show()
     
 buttons.buttonA.irq(trigger=machine.Pin.IRQ_RISING, handler=ButtonA_IRQHandler)
@@ -51,11 +52,11 @@ prong = machine.ADC(26)     # Sets up the Mini Prong input with ADC0, which is a
 output.registerServo()      # Setup the servo ready for use
 log.writeProjectInfo("User Name", "Project Name")
 log.setupDataFields("Date", "Time", "Temperature", "Pressure", "Humidity", "Soil Moisture", "IAQ", "eCO2")
-rtc.setAlarm(17, 0)     # Set an initial alarm for when the first control actions occur and data is logged
+rtc.setAlarm(16, 0)     # Set an initial alarm for when the first control actions occur and data is logged
 
 while True:
     # These actions only occur when the alarm time conditions are met
-    if checkAlarm():
+    if rtc.checkAlarm():
         # Measure and log data
         bme688.measureData()
         log.storeDataEntry(rtc.readDateString(), rtc.readTimeString(), str(bme688.readTemperature()), str(bme688.readPressure()), str(bme688.readHumidity()), str(prong.read_u16()), str(bme688.getAirQualityScore()), str(bme688.readeCO2()))
@@ -87,10 +88,8 @@ while True:
         zipleds.show()
         time.sleep_ms(10000)
         # Turn off the ZIP LEDs
-        zipleds.clear()
+        for led in range(8):
+            zipleds.clear(led)
         zipleds.show()
-
-
-
 
 
