@@ -17,11 +17,12 @@ log = KitronikDataLogger(logFileName, "semicolon")
 output = KitronikOutputControl()
 buttons = KitronikButton()
 
-rtc.setDate(15, 11, 2021)
-rtc.setTime(15, 30, 0)
+rtc.setDate(16, 11, 2021)
+rtc.setTime(10, 12, 0)
 
 # Button A will display the current date and time and some key measurement data on the OLED screen and turn on some onbaord ZIP LEDs
 def ButtonA_IRQHandler(pin):
+    bme688.measureData()
     oled.clear()
     oled.displayText(rtc.readDateString(), 1)
     oled.displayText(rtc.readTimeString(), 2)
@@ -36,6 +37,15 @@ def ButtonA_IRQHandler(pin):
 
 # Button B will clear the OLED screen and the ZIP LEDs
 def ButtonB_IRQHandler(pin):
+    output.registerServo()
+    output.servoToPosition(45)
+    time.sleep_ms(1000)
+    output.servoToPosition(135)
+    output.deregisterServo()
+    # Turn high-power output on GP15 ON; after 100ms pause, turn OFF the high-power output
+    output.highPowerOn(15)
+    time.sleep_ms(100)
+    output.highPowerOff(15)
     oled.clear()
     oled.show()
     for led in range(8):
@@ -49,10 +59,9 @@ bme688.setupGasSensor()
 bme688.calcBaselines()
 
 prong = machine.ADC(26)     # Sets up the Mini Prong input with ADC0, which is associated with GP26
-output.registerServo()      # Setup the servo ready for use
 log.writeProjectInfo("User Name", "Project Name")
 log.setupDataFields("Date", "Time", "Temperature", "Pressure", "Humidity", "Soil Moisture", "IAQ", "eCO2")
-rtc.setAlarm(16, 0)     # Set an initial alarm for when the first control actions occur and data is logged
+rtc.setAlarm(10, 30)     # Set an initial alarm for when the first control actions occur and data is logged
 
 while True:
     # These actions only occur when the alarm time conditions are met
@@ -60,12 +69,15 @@ while True:
         # Measure and log data
         bme688.measureData()
         log.storeDataEntry(rtc.readDateString(), rtc.readTimeString(), str(bme688.readTemperature()), str(bme688.readPressure()), str(bme688.readHumidity()), str(prong.read_u16()), str(bme688.getAirQualityScore()), str(bme688.readeCO2()))
-        # Move the servo to position 45 degrees and turn high-power output on GP15 ON
+        # Move the servo to position 45 degrees; after 1s pause, move the servo to position 135 degrees
+        output.registerServo()
         output.servoToPosition(45)
-        output.highPowerOn(15)
         time.sleep_ms(1000)
-        # After 1s pause, move the servo to position 135 degrees and turn OFF the high-power output
         output.servoToPosition(135)
+        output.deregisterServo()
+        # Turn high-power output on GP15 ON; after 100ms pause, turn OFF the high-power output
+        output.highPowerOn(15)
+        time.sleep_ms(100)
         output.highPowerOff(15)
         # Silence the alarm so it does not keep triggering
         rtc.silenceAlarm()
