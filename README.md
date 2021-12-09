@@ -197,7 +197,8 @@ There are three options for the data separator:
 * "comma" = '**,**'
 * "semicolon" = '**;**'
 * "tab" = '&nbsp;&nbsp;&nbsp;&nbsp;'
-There are two blocks which are used to setup the data log file with some extra information:  
+
+There are two functions which are used to setup the data log file with some extra information:  
 ```python
 log.writeProjectInfo(name, subject)
 log.setupDataFields(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10)
