@@ -53,10 +53,12 @@ class KitronikOutputControl:
 
     # Doesn't actually register/unregister, just stops and starts the servo PIO
     def registerServo(self):
-        self.servo[0].active(1)
+        if(not self.servo[0].active()):
+            self.servo[0].active(1)
 
     def deregisterServo(self):
-        self.servo[0].active(0)
+        if(self.servo[0].active()):
+            self.servo[0].active(0)
  
     # goToPosition takes a degree position for the servo to go to. 
     # 0degrees->180 degrees is 0->2000us, plus offset of 500uS
