@@ -15,6 +15,20 @@ class KitronikButton:
 
 # The KitronikOutputControl class enables control of the servo and high-power outputs on the board
 class KitronikOutputControl:
+    # This code drives a pwm on the PIO. It is running at 2Mhz, which gives the PWM a 1uS resolution. 
+    @asm_pio(sideset_init=PIO.OUT_LOW)
+    def _servo_pwm():
+    # First we clear the pin to zero, then load the registers. Y is always 20000 - 20uS, x is the pulse 'on' length.     
+        pull(noblock) .side(0)
+        mov(x, osr) # Keep most recent pull data stashed in X, for recycling by noblock
+        mov(y, isr) # ISR must be preloaded with PWM count max
+    # This is where the looping work is done. the overall loop rate is 1Mhz (clock is 2Mhz - we have 2 instructions to do)    
+        label("loop")
+        jmp(x_not_y, "skip") #if there is 'excess' Y number leave the pin alone and jump to the 'skip' label until we get to the X value
+        nop()         .side(1)
+        label("skip")
+        jmp(y_dec, "loop") #count down y by 1 and jump to pwmloop. When y is 0 we will go back to the 'pull' command
+
     def __init__(self):
         # High Power Output Pins
         self.highPwr_3 = Pin(3, Pin.OUT)
@@ -31,22 +45,8 @@ class KitronikOutputControl:
         self.minServoPulse = 500
         self.pulseTrain = 20000
         self.degreesToUS = 2000/180
-        
-        # This code drives a pwm on the PIO. It is running at 2Mhz, which gives the PWM a 1uS resolution. 
-        @asm_pio(sideset_init=PIO.OUT_LOW)
-        def _servo_pwm():
-        # First we clear the pin to zero, then load the registers. Y is always 20000 - 20uS, x is the pulse 'on' length.     
-            pull(noblock) .side(0)
-            mov(x, osr) # Keep most recent pull data stashed in X, for recycling by noblock
-            mov(y, isr) # ISR must be preloaded with PWM count max
-        # This is where the looping work is done. the overall loop rate is 1Mhz (clock is 2Mhz - we have 2 instructions to do)    
-            label("loop")
-            jmp(x_not_y, "skip") #if there is 'excess' Y number leave the pin alone and jump to the 'skip' label until we get to the X value
-            nop()         .side(1)
-            label("skip")
-            jmp(y_dec, "loop") #count down y by 1 and jump to pwmloop. When y is 0 we will go back to the 'pull' command
-
-        self.servo.append (StateMachine(1, _servo_pwm, freq=2000000, sideset_base=Pin(2)))
+        # Create and start the servo statemachine
+        self.servo.append (StateMachine(1, self._servo_pwm, freq=2000000, sideset_base=Pin(2)))
         self.servo[0].put(self.pulseTrain)
         self.servo[0].exec("pull()")
         self.servo[0].exec("mov(isr, osr)")
@@ -263,24 +263,24 @@ class KitronikBuzzer:
 # The KitronikZIPLEDs class enables control of the ZIP LEDs both on the board and any connected externally
 class KitronikZIPLEDs:
     # We drive the ZIP LEDs using one of the PIO statemachines.         
+    @asm_pio(sideset_init=PIO.OUT_LOW, out_shiftdir=PIO.SHIFT_LEFT, autopull=True, pull_thresh=24)
+    def _ZIPLEDOutput():
+        T1 = 2
+        T2 = 5
+        T3 = 3
+        wrap_target()
+        label("bitloop")
+        out(x, 1)               .side(0)    [T3 - 1]
+        jmp(not_x, "do_zero")   .side(1)    [T1 - 1]
+        jmp("bitloop")          .side(1)    [T2 - 1]
+        label("do_zero")
+        nop()                   .side(0)    [T2 - 1]
+        wrap()
+
     def __init__(self, num_zip_leds):
         self.num_zip_leds = num_zip_leds
         # Create  and start the StateMachine for the ZIPLeds
-        @asm_pio(sideset_init=PIO.OUT_LOW, out_shiftdir=PIO.SHIFT_LEFT, autopull=True, pull_thresh=24)
-        def _ZIPLEDOutput():
-            T1 = 2
-            T2 = 5
-            T3 = 3
-            wrap_target()
-            label("bitloop")
-            out(x, 1)               .side(0)    [T3 - 1]
-            jmp(not_x, "do_zero")   .side(1)    [T1 - 1]
-            jmp("bitloop")          .side(1)    [T2 - 1]
-            label("do_zero")
-            nop()                   .side(0)    [T2 - 1]
-            wrap()
-
-        self.ZIPLEDs = StateMachine(4, _ZIPLEDOutput, freq=8_000_000, sideset_base=Pin(20))
+        self.ZIPLEDs = StateMachine(4, self._ZIPLEDOutput, freq=8_000_000, sideset_base=Pin(20))
         self.theLEDs = array.array("I", [0 for _ in range(self.num_zip_leds)]) #an array for the LED colours.
         self.brightness = 0.5 #20% initially 
         self.ZIPLEDs.active(1)
@@ -484,8 +484,6 @@ class KitronikBME688:
         self.CHIP_ADDRESS = i2cAddr    # I2C address as determined by hardware configuration
         sda = Pin(sda)
         scl = Pin(scl)
-        #self.i2c = I2C(0,sda=sda, scl=scl, freq=100000)
-        # VDEV2 Pins
         self.i2c = I2C(1,sda=sda, scl=scl, freq=100000)
 
         # Useful BME688 Register Addresses
@@ -597,14 +595,6 @@ class KitronikBME688:
         self.gResRaw = 0  # adc reading of raw gas resistance
         self.gasRange = 0
 
-        # Compensation calculation intermediate variables (used across temperature, pressure, humidity and gas)
-        self.var1 = 0
-        self.var2 = 0
-        self.var3 = 0
-        self.var4 = 0
-        self.var5 = 0
-        self.var6 = 0
-
         self.t_fine = 0                          # Intermediate temperature value used for pressure calculation
         self.newAmbTemp = 0
         self.tAmbient = 0       # Intermediate temperature value used for heater calculation
@@ -618,10 +608,10 @@ class KitronikBME688:
 
     # Temperature compensation calculation: rawADC to degrees C (integer)
     def calcTemperature(self, tempADC):
-        self.var1 = (tempADC >> 3) - (self.PAR_T1 << 1)
-        self.var2 = (self.var1 * self.PAR_T2) >> 11
-        self.var3 = ((((self.var1 >> 1) * (self.var1 >> 1)) >> 12) * (self.PAR_T3 << 4)) >> 14
-        self.t_fine = self.var2 + self.var3
+        var1 = (tempADC >> 3) - (self.PAR_T1 << 1)
+        var2 = (var1 * self.PAR_T2) >> 11
+        var3 = ((((var1 >> 1) * (var1 >> 1)) >> 12) * (self.PAR_T3 << 4)) >> 14
+        self.t_fine = var2 + var3
         self.newAmbTemp = ((self.t_fine * 5) + 128) >> 8
         self.tRead = self.newAmbTemp / 100     # Convert to floating point with 2 dp
         if (self.ambTempFlag == False):
@@ -629,25 +619,25 @@ class KitronikBME688:
 
     # Pressure compensation calculation: rawADC to Pascals (integer)
     def intCalcPressure(self, pressureADC):
-        self.var1 = (self.t_fine >> 1) - 64000
-        self.var2 = ((((self.var1 >> 2) * (self.var1 >> 2)) >> 11) * self.PAR_P6) >> 2
-        self.var2 = self.var2 + ((self.var1 * self.PAR_P5) << 1)
-        self.var2 = (self.var2 >> 2) + (self.PAR_P4 << 16)
-        self.var1 = (((((self.var1 >> 2) * (self.var1 >> 2)) >> 13) * (self.PAR_P3 << 5)) >> 3) + ((self.PAR_P2 * self.var1) >> 1)
-        self.var1 = self.var1 >> 18
-        self.var1 = ((32768 + self.var1) * self.PAR_P1) >> 15
+        var1 = (self.t_fine >> 1) - 64000
+        var2 = ((((var1 >> 2) * (var1 >> 2)) >> 11) * self.PAR_P6) >> 2
+        var2 = var2 + ((var1 * self.PAR_P5) << 1)
+        var2 = (var2 >> 2) + (self.PAR_P4 << 16)
+        var1 = (((((var1 >> 2) * (var1 >> 2)) >> 13) * (self.PAR_P3 << 5)) >> 3) + ((self.PAR_P2 * var1) >> 1)
+        var1 = var1 >> 18
+        var1 = ((32768 + var1) * self.PAR_P1) >> 15
         self.pRead = 1048576 - pressureADC
-        self.pRead = ((self.pRead - (self.var2 >> 12)) * 3125)
+        self.pRead = ((self.pRead - (var2 >> 12)) * 3125)
 
         if (self.pRead >= (1 << 30)):
-            self.pRead = (self.pRead // self.var1) << 1
+            self.pRead = (self.pRead // var1) << 1
         else:
-            self.pRead = ((self.pRead << 1) // self.var1)
+            self.pRead = ((self.pRead << 1) // var1)
 
-        self.var1 = (self.PAR_P9 * (((self.pRead >> 3) * (self.pRead >> 3)) >> 13)) >> 12
-        self.var2 = ((self.pRead >> 2) * self.PAR_P8) >> 13
-        self.var3 = ((self.pRead >> 8) * (self.pRead >> 8) * (self.pRead >> 8) * self.PAR_P10) >> 17
-        self.pRead = self.pRead + ((self.var1 + self.var2 + self.var3 + (self.PAR_P7 << 7)) >> 4)
+        var1 = (self.PAR_P9 * (((self.pRead >> 3) * (self.pRead >> 3)) >> 13)) >> 12
+        var2 = ((self.pRead >> 2) * self.PAR_P8) >> 13
+        var3 = ((self.pRead >> 8) * (self.pRead >> 8) * (self.pRead >> 8) * self.PAR_P10) >> 17
+        self.pRead = self.pRead + ((var1 + var2 + var3 + (self.PAR_P7 << 7)) >> 4)
 
     # Humidity compensation calculation: rawADC to % (integer)
     # 'tempScaled' is the current reading from the Temperature sensor
@@ -655,14 +645,14 @@ class KitronikBME688:
         self.hPrev = self.hRead
         tempScaled = math.trunc(tempScaled)
         
-        self.var1 = humidADC - (self.PAR_H1 << 4) - (((tempScaled * self.PAR_H3) // 100) >> 1)
-        self.var2 = (self.PAR_H2 * (((tempScaled * self.PAR_H4) // 100) + (((tempScaled * ((tempScaled * self.PAR_H5) // 100)) >> 6) // 100) + (1 << 14))) >> 10
-        self.var3 = self.var1 * self.var2
-        self.var4 = ((self.PAR_H6 << 7) + ((tempScaled * self.PAR_H7) // 100)) >> 4
-        self.var5 = ((self.var3 >> 14) * (self.var3 >> 14)) >> 10
-        self.var6 = (self.var4 * self.var5) >> 1
-        self.hRead = (self.var3 + self.var6) >> 12
-        self.hRead = (((self.var3 + self.var6) >> 10) * (1000)) >> 12
+        var1 = humidADC - (self.PAR_H1 << 4) - (((tempScaled * self.PAR_H3) // 100) >> 1)
+        var2 = (self.PAR_H2 * (((tempScaled * self.PAR_H4) // 100) + (((tempScaled * ((tempScaled * self.PAR_H5) // 100)) >> 6) // 100) + (1 << 14))) >> 10
+        var3 = var1 * var2
+        var4 = ((self.PAR_H6 << 7) + ((tempScaled * self.PAR_H7) // 100)) >> 4
+        var5 = ((var3 >> 14) * (var3 >> 14)) >> 10
+        var6 = (var4 * var5) >> 1
+        self.hRead = (var3 + var6) >> 12
+        self.hRead = (((var3 + var6) >> 10) * (1000)) >> 12
         self.hRead = self.hRead // 1000
 
     # Gas sensor heater target temperature to target resistance calculation
@@ -670,23 +660,23 @@ class KitronikBME688:
     # 'targetTemp' is the desired temperature of the hot plate in degC (in range 200 to 400)
     # Note: Heating duration also needs to be specified for each heating step in 'gas_wait' registers
     def intConvertGasTargetTemp(self, ambientTemp, targetTemp):
-        self.var1 = ((ambientTemp * self.PAR_G3) // 1000) << 8    # Divide by 1000 as we have ambientTemp in pre-degC format (i.e. 2500 rather than 25.00 degC)
-        self.var2 = (self.PAR_G1 + 784) * (((((self.PAR_G2 + 154009) * targetTemp * 5) // 100) + 3276800) // 10)
-        self.var3 = self.var1 + (self.var2 >> 1)
-        self.var4 = (self.var3 // (self.RES_HEAT_RANGE + 4))
-        self.var5 = (131 * self.RES_HEAT_VAL) + 65536                 # Target heater resistance in Ohms
-        resHeatX100 = (((self.var4 // self.var5) - 250) * 34)
+        var1 = ((ambientTemp * self.PAR_G3) // 1000) << 8    # Divide by 1000 as we have ambientTemp in pre-degC format (i.e. 2500 rather than 25.00 degC)
+        var2 = (self.PAR_G1 + 784) * (((((self.PAR_G2 + 154009) * targetTemp * 5) // 100) + 3276800) // 10)
+        var3 = var1 + (var2 >> 1)
+        var4 = (var3 // (self.RES_HEAT_RANGE + 4))
+        var5 = (131 * self.RES_HEAT_VAL) + 65536                 # Target heater resistance in Ohms
+        resHeatX100 = (((var4 // var5) - 250) * 34)
         resHeat = ((resHeatX100 + 50) // 100)
 
         return resHeat
 
     # Gas resistance compensation calculation: rawADC & range to Ohms (integer)
     def intCalcgRes(self, gasADC, gasRange):
-        self.var1 = 262144 >> gasRange
-        self.var2 = gasADC - 512
-        self.var2 = self.var2 * 3
-        self.var2 = 4096 + self.var2
-        calcGasRes = ((10000 * self.var1) // self.var2)
+        var1 = 262144 >> gasRange
+        var2 = gasADC - 512
+        var2 = var2 * 3
+        var2 = 4096 + var2
+        calcGasRes = ((10000 * var1) // var2)
         self.gRes = calcGasRes * 100
 
     # Initialise the BME688, establishing communication, entering initial T, P & H oversampling rates, setup filter and do a first data reading (won't return gas)
@@ -716,49 +706,45 @@ class KitronikBME688:
 
         # Do an initial data read (will only return temperature, pressure and humidity as no gas sensor parameters have been set)
         self.measureData()
-        print("Init Complete")
 
-    # Setup the gas sensor (defaults are 300°C and 150ms).
+    # Setup the gas sensor (defaults are 300°C and 180ms).
     # targetTemp is the target temperature for the gas sensor plate to reach (200 - 400°C), eg: 300
-    # heatDuration is the length of time for the heater to be turned on (0 - 4032ms), eg: 150
-    #def setupGasSensor(self, targetTemp=300, heatDuration=150):
-    def setupGasSensor(self):
+    # heatDuration is the length of time for the heater to be turned on (0 - 4032ms), eg: 180
+    # WARNING: The temperature and duration values can be changed but this is not recommended unless the user is familiar with gas sensor setup
+    # The default values have been chosen as they provide a good all-round sensor response for air quality purposes
+    def setupGasSensor(self, targetTemp=300, heatDuration=180):
         if (self.bme688InitFlag == False):
             self.bme688Init()
 
         # Limit targetTemp between 200°C & 400°C
-        #if (targetTemp < 200):
-        #    targetTemp = 200
-        #elif (targetTemp > 400):
-        #    targetTemp = 400
+        if (targetTemp < 200):
+            targetTemp = 200
+        elif (targetTemp > 400):
+            targetTemp = 400
 
         # Limit heatDuration between 0ms and 4032ms
-        #if (heatDuration < 0):
-        #    heatDuration = 0
-        #elif (heatDuration > 4032):
-        #    heatDuration = 4032
+        if (heatDuration < 0):
+            heatDuration = 0
+        elif (heatDuration > 4032):
+            heatDuration = 4032
 
         # Define the target heater resistance from temperature
-        
-        #self.i2c.writeto_mem(self.CHIP_ADDRESS, 0x5A, bytes(self.intConvertGasTargetTemp(self.tAmbient, targetTemp)))     # res_wait_0 register - heater step 0
-        self.i2c.writeto_mem(self.CHIP_ADDRESS, 0x5A, self.intConvertGasTargetTemp(self.tAmbient, 300).to_bytes(1, 'big'))
+        self.i2c.writeto_mem(self.CHIP_ADDRESS, 0x5A, self.intConvertGasTargetTemp(self.tAmbient, targetTemp).to_bytes(1, 'big'))   # res_wait_0 register - heater step 0
 
         # Define the heater on time, converting ms to register code (Heater Step 0) - cannot be greater than 4032ms
         # Bits <7:6> are a multiplier (1, 4, 16 or 64 times)    Bits <5:0> are 1ms steps (0 to 63ms)
-        #codedDuration = 0
-        #if (heatDuration < 4032):
-        #    factor = 0
-        #    while (heatDuration > 63):
-        #        heatDuration = (heatDuration // 4)
-        #        factor = factor + 1
+        codedDuration = 0
+        if (heatDuration < 4032):
+            factor = 0
+            while (heatDuration > 63):
+                heatDuration = (heatDuration // 4)
+                factor = factor + 1
 
-        #    codedDuration = heatDuration + (factor * 64)
-        #else:
-        #    codedDuration = 255
+            codedDuration = heatDuration + (factor * 64)
+        else:
+            codedDuration = 255
 
-        #self.i2c.writeto_mem(self.CHIP_ADDRESS, 0x64, bytes(codedDuration))      # gas_wait_0 register - heater step 0
-        codedDuration = 109
-        self.i2c.writeto_mem(self.CHIP_ADDRESS, 0x64, codedDuration.to_bytes(1, 'big'))
+        self.i2c.writeto_mem(self.CHIP_ADDRESS, 0x64, codedDuration.to_bytes(1, 'big'))     # gas_wait_0 register - heater step 0
 
         # Select index of heater step (0 to 9): CTRL_GAS_1 reg <3:0>    (Make sure to combine with gas enable setting already there)
         gasEnable = self.getUInt8(self.CTRL_GAS_1) & 0x20
@@ -811,30 +797,55 @@ class KitronikBME688:
     # Take 60 readings over a ~5min period and find the mean
     # Establish the baseline gas resistance reading and the ambient temperature.
     # These values are required for air quality calculations
-    def calcBaselines(self):
+    # When the baseline process is complete, values for gBase and tAmbient are stored in a file
+    # On subsequent power cycles of the board, this function will look for that file and take the baseline values stored there
+    # To force the baselines process to be run again, call the function like this: calcBaselines(True)
+    def calcBaselines(self, forcedRun=False):
         if (self.bme688InitFlag == False):
             self.bme688Init()
         if (self.gasInit == False):
-            self.setupGasSensor(300, 150)
+            self.setupGasSensor()
 
-        self.ambTempFlag = False
-
-        burnInReadings = 0
-        burnInData = 0
-        ambTotal = 0
+        self.screen.clear()
         self.screen.displayText("Setting Baseline", 2)
         self.screen.show()
-        while (burnInReadings < 60):               # Measure data and continue summing gas resistance until 60 readings have been taken
-            self.measureData()
-            burnInData = burnInData + self.gRes
-            ambTotal = ambTotal + self.newAmbTemp
-            sleep_ms(5000)
-            burnInReadings = burnInReadings + 1
-
-        self.gBase = (burnInData / 60)             # Find the mean gas resistance during the period to form the baseline
-        self.tAmbient = (ambTotal / 60)            # Calculate the ambient temperature as the mean of the 60 initial readings
         
-        self.ambTempFlag = True
+        try: # Look for a 'baselines.txt' file existing - if it does, take the baseline values from there (unless 'forcedRun' is set to True)
+            if not forcedRun:
+                f = open("baselines.txt", "r")
+                self.gBase = float(f.readline())
+                self.tAmbient = float(f.readline())
+            else:
+                raise Exception("RUNNING BASELINE PROCESS")
+        except: # If there is no file, an exception is raised, and the baseline process will be carried out (creating a new file at the end)
+            self.ambTempFlag = False
+
+            burnInReadings = 0
+            burnInData = 0
+            ambTotal = 0
+            progress = 0
+            while (burnInReadings < 60):               # Measure data and continue summing gas resistance until 60 readings have been taken
+                progress = math.trunc((burnInReadings / 60) * 100)
+                self.screen.clear()
+                self.screen.displayText(str(progress) + "%", 4, 50)
+                self.screen.displayText("Setting Baseline", 2)
+                self.screen.show()
+                self.measureData()
+                burnInData = burnInData + self.gRes
+                ambTotal = ambTotal + self.newAmbTemp
+                sleep_ms(5000)
+                burnInReadings = burnInReadings + 1
+
+            self.gBase = (burnInData / 60)             # Find the mean gas resistance during the period to form the baseline
+            self.tAmbient = (ambTotal / 60)            # Calculate the ambient temperature as the mean of the 60 initial readings
+
+            # Save baseline values to a file
+            f = open("baselines.txt", "w") #open in write - creates if not existing, will overwrite if it does
+            f.write(str(self.gBase) + "\r\n")
+            f.write(str(self.tAmbient) + "\r\n")
+            f.close()
+            
+            self.ambTempFlag = True
         
         self.screen.clear()
         self.screen.displayText("Setup Complete!", 2)
