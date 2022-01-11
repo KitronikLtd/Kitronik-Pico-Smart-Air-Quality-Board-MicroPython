@@ -96,7 +96,6 @@ class KitronikDataLogger:
     # Separator options: ("comma", "semicolon", "tab")
     def __init__(self, file, separator):
         self.MAX_FILE_SIZE = 500000 # This is approximately 10000 full entries
-        self.LOG_HEADER = "Kitronik Data Logger - Pico Smart Air Quality Board - www.kitronik.co.uk\r\n"
         if (separator == "comma"):
             self.SEPARATOR = ","
         elif (separator == "semicolon"):
@@ -115,13 +114,14 @@ class KitronikDataLogger:
         self.projectInfo = False
         self.headings = False
 
-    # Write a header section to the specified file - name and subject are user entered details
-    def writeProjectInfo(self, name, subject):
-        self.name = name
-        self.subject = subject
-        self.writeFile(self.FILENAME, self.LOG_HEADER)
-        self.writeFile(self.FILENAME, "Name: " + name + "\r\n")
-        self.writeFile(self.FILENAME, "Subject: " + subject + "\r\n")
+    # Write a header section to the specified file (there are 3 free text fields, each will write on a separate line)
+    def writeProjectInfo(self, line1="", line2="", line3=""):
+        if (line1 != ""):
+            self.writeFile(self.FILENAME, line1 + "\r\n")
+        if (line2 != ""):
+            self.writeFile(self.FILENAME, line2 + "\r\n")
+        if (line3 != ""):
+            self.writeFile(self.FILENAME, line3 + "\r\n")
         self.projectInfo = True
 
     # This writes whatever is passed to it to the file     
@@ -131,7 +131,7 @@ class KitronikDataLogger:
         f.close()
 
     # Input and write to the file up to 10 data field headings
-    def setupDataFields(self, field1="", field2="", field3="", field4="", field5="", field6="", field7="", field8="", field9="", field10=""):
+    def nameColumnHeadings(self, field1="", field2="", field3="", field4="", field5="", field6="", field7="", field8="", field9="", field10=""):
         dataHeadings = ""
         if (field1 != ""):
             dataHeadings = field1 + self.SEPARATOR
@@ -353,6 +353,9 @@ class KitronikRTC:
         self.alarmMinute = 0
         self.alarmSet = False
         self.alarmTrigger = False
+        self.alarmRepeat = False
+        self.hourPeriod = 0
+        self.minutePeriod = 0
 
     # Function calculates the weekday (0 = Monday, 6 = Sunday) based on the date, taking into account leap years
     def calcWeekday(self, day, month, year):
@@ -443,23 +446,38 @@ class KitronikRTC:
             return self.second
 
     # Set an alarm for a specific hour and minute
-    def setAlarm(self, hour, minute):
+    # Extra options to set a periodically repeating alarm (set alarmRepeat to True and then specifiy the hour and/or minute period between alarms)
+    def setAlarm(self, hour, minute, alarmRepeat=False, hourPeriod=0, minutePeriod=0):
         self.alarmHour = hour
         self.alarmMinute = minute
+        self.alarmRepeat = alarmRepeat
+        if alarmRepeat:
+            self.hourPeriod = hourPeriod
+            self.minutePeriod = minutePeriod
         self.alarmSet = True
 
     # Check whether the alarm conditions have been met and then trigger the alarm
     def checkAlarm(self):
-        if (self.alarmSet):
+        if self.alarmSet:
             if (self.readParameter("h") == self.alarmHour):
                 if (self.readParameter("min") == self.alarmMinute):
                     self.alarmTrigger = True
         return self.alarmTrigger
 
-    # Sets 'alarmTrigger' and 'alarmSet' back to False 
+    # Sets 'alarmTrigger' back to False, checks whether the alarm should repeat (sets new one if it should) or sets 'alarmSet' back to False
     def silenceAlarm(self):
         self.alarmTrigger = False
-        self.alarmSet = False
+        if not self.alarmRepeat:
+            self.alarmSet = False
+        else:
+            newHour = self.alarmHour + self.hourPeriod
+            newMinute = self.alarmMinute + self.minutePeriod
+            if (newMinute > 59):
+                newMinute = newMinute - 60
+                newHour = newHour + 1
+            if (newHour > 23):
+                newHour = newHour - 24
+            self.setAlarm(newHour, newMinute, True, self.hourPeriod, self.minutePeriod)
 
 # The KitronikBME688 class enables contro and use of the BME688 sensor on the board
 class KitronikBME688:
@@ -1166,6 +1184,11 @@ class KitronikOLED(framebuf.FrameBuffer):
     # Need to call 'show()' to make the clear actually happen
     def clear(self):
         super().fill(0)
+
+    # Clear a specific line on the screen
+    def clearLine(self, line):
+        yPixel = (line - 1) + ((line * 10) - 10)
+        super().fill_rect(0, yPixel, 128, 10, 0)
 
     # Draw a line on the screen (vertical, horizontal or diagonal), setting start and finish (x, y) coordinates
     # Need to call 'show()' to make the line actually display    
