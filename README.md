@@ -200,10 +200,10 @@ There are three options for the data separator:
 
 There are two functions which are used to setup the data log file with some extra information:  
 ```python
-log.writeProjectInfo(name, subject)
-log.setupDataFields(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10)
+log.writeProjectInfo(line1, line2, line3)
+log.nameColumnHeadings(field1, field2, field3, field4, field5, field6, field7, field8, field9, field10)
 ```
-The first writes a standard header line to the file, and then allows two user-entered fields, designated here as 'name' and 'subject'.  
+The first writesup to three user-entered free text fields (if only two arguments are given, only two lines will be written).  
 The second allows the user to include up to 10 data field headings which can then need to be matched to the order of the data fields in the data entry (these headings will become column headings if the data is imported to a spreadsheet program).  
 With these sections included, the start of a log file will look something like this:  
 ```
@@ -237,7 +237,7 @@ To register a servo ready to be used:
 ```python
  output.registerServo()
 ```
-This process sets the PIO PWM active on the servo pin.  
+This process sets the PIO PWM active on the servo pin (**Note:** The servo is registered by default).  
 To control the movement of a servo, turning it to a set angle (or controlling the speed/direction of a continuous rotation servo):  
 ```python
 output.servoToPosition(degrees)
