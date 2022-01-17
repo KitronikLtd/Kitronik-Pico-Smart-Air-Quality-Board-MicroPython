@@ -7,6 +7,19 @@ from rp2 import PIO, StateMachine, asm_pio
 from time import sleep, sleep_ms, sleep_us, ticks_ms, ticks_us
 from micropython import const
 
+# Initialise the module with all outputs off
+# High Power Output Pins
+hp_3 = Pin(3, Pin.OUT)
+hp_15 = Pin(15, Pin.OUT)
+hp_3.value(0)
+hp_15.value(0)
+# Servo
+servo = Pin(2, Pin.OUT)
+servo.value(0)
+# Buzzer
+buzzer = PWM(Pin(4))
+buzzer.duty_u16(0)
+
 # The KitronikButton class enable the use of the 2 user input buttons on the board
 class KitronikButton:
     def __init__(self):
@@ -50,8 +63,10 @@ class KitronikOutputControl:
         self.servo[0].put(self.pulseTrain)
         self.servo[0].exec("pull()")
         self.servo[0].exec("mov(isr, osr)")
+        self.registerServo()
 
     # Doesn't actually register/unregister, just stops and starts the servo PIO
+    # The servo is registered by default in the __init__() function - these are only required if you want to use Pin 2 for something else, and then register the servo again
     def registerServo(self):
         if(not self.servo[0].active()):
             self.servo[0].active(1)

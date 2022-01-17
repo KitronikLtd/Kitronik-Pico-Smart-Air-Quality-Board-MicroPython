@@ -5,7 +5,7 @@ bme688 = KitronikBME688()
 oled = KitronikOLED()
 rtc = KitronikRTC()
 
-rtc.setDate(1, 11, 2021)
+rtc.setDate(5, 11, 2021)
 rtc.setTime(14, 0, 0)
 
 while True:

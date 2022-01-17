@@ -34,6 +34,8 @@ def ButtonB_IRQHandler(pin):
 # Debounced Buttons - Buzzer or ZIP LEDs
 def checkButtonA(callBackParam):
     global buttonAState
+    # For Buzzer
+    global frequency
     # For ZIP LEDs
     #global colourFade
     #global brightnessFade
@@ -41,13 +43,17 @@ def checkButtonA(callBackParam):
     buttonAState &=0xFFFF
     if buttonAState == 0xEFFF: #button A has been pressed and passes the debouncing test
         # Buzzer
-        buzzer.playTone_Length(500, 250)
+        frequency += 100
+        if (frequency > 3000):
+            frequency = 3000
         # ZIP LEDs
         #colourFade = True
         #brightnessFade = False
 
 def checkButtonB(callBackParam):
     global buttonBState
+    # For Buzzer
+    global frequency
     # For ZIP LEDs
     #global colourFade
     #global brightnessFade
@@ -55,7 +61,9 @@ def checkButtonB(callBackParam):
     buttonBState &=0xFFFF
     if buttonBState == 0xEFFF: #button B has been pressed and passes the debouncing test
         # Buzzer
-        buzzer.playTone_Length(1000, 500)
+        frequency -= 100
+        if (frequency < 30):
+            frequency = 30
         # ZIP LEDs
         #colourFade = False
         #brightnessFade = True
@@ -82,7 +90,7 @@ while True:
         buzzer.playTone_Length(1000, 2000)
 
     '''
-    # IRQs
+    # Buzzer
     buzzer.playTone(frequency)
     '''
     '''
