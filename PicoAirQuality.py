@@ -109,7 +109,7 @@ class KitronikOutputControl:
 class KitronikDataLogger:
     # Function is called when the class is initialised - sets the maximum permissable filesize, the data separator and creates the log file with the entered filename
     # Separator options: ("comma", "semicolon", "tab")
-    def __init__(self, file, separator):
+    def __init__(self, file = "data_log.txt", separator = "semicolon"):
         self.MAX_FILE_SIZE = 500000 # This is approximately 10000 full entries
         if (separator == "comma"):
             self.SEPARATOR = ","
