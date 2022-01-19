@@ -467,12 +467,13 @@ class KitronikRTC:
     # Set an alarm for a specific hour and minute
     # Extra options to set a periodically repeating alarm (set alarmRepeat to True and then specifiy the hour and/or minute period between alarms)
     def setAlarm(self, hour, minute, alarmRepeat=False, hourPeriod=0, minutePeriod=0):
-        self.alarmHour = hour
-        self.alarmMinute = minute
+        self.alarmHour = math.ceil(hour)
+        self.alarmMinute = math.ceil(minute)
         self.alarmRepeat = alarmRepeat
+        
         if alarmRepeat:
-            self.hourPeriod = hourPeriod
-            self.minutePeriod = minutePeriod
+            self.hourPeriod = math.ceil(hourPeriod)
+            self.minutePeriod = math.ceil(minutePeriod)
         self.alarmSet = True
 
     # Check whether the alarm conditions have been met and then trigger the alarm
