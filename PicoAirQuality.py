@@ -109,7 +109,7 @@ class KitronikOutputControl:
 class KitronikDataLogger:
     # Function is called when the class is initialised - sets the maximum permissable filesize, the data separator and creates the log file with the entered filename
     # Separator options: ("comma", "semicolon", "tab")
-    def __init__(self, file, separator):
+    def __init__(self, file = "data_log.txt", separator = "semicolon"):
         self.MAX_FILE_SIZE = 500000 # This is approximately 10000 full entries
         if (separator == "comma"):
             self.SEPARATOR = ","
@@ -123,8 +123,9 @@ class KitronikDataLogger:
             f.close()
         except OSError:
             print("File already exists")
-        self.name = ""
-        self.subject = ""
+        self.line1 = ""
+        self.line2 = ""
+        self.line3 = ""
         self.dataHeadings = ""
         self.projectInfo = False
         self.headings = False
@@ -133,10 +134,13 @@ class KitronikDataLogger:
     def writeProjectInfo(self, line1="", line2="", line3=""):
         if (line1 != ""):
             self.writeFile(self.FILENAME, line1 + "\r\n")
+            self.line1 = line1
         if (line2 != ""):
             self.writeFile(self.FILENAME, line2 + "\r\n")
+            self.line2 = line2
         if (line3 != ""):
             self.writeFile(self.FILENAME, line3 + "\r\n")
+            self.line3 = line3
         self.projectInfo = True
 
     # This writes whatever is passed to it to the file     
@@ -224,9 +228,9 @@ class KitronikDataLogger:
         if self.projectInfo:        # If there is Project Info, skip over these lines and then write them to the temporary file
             for l in range(3):
                 readFrom.readline()
-            writeTo.write(self.LOG_HEADER)
-            writeTo.write(self.name + "\r\n")
-            writeTo.write(self.subject  + "\r\n")
+            writeTo.write(self.line1 + "\r\n")
+            writeTo.write(self.line2 + "\r\n")
+            writeTo.write(self.line3  + "\r\n")
         if self.headings:
             readFrom.readline()     # If there are Headings, skip over this line and then write them to the temporary file
             writeTo.write(self.dataHeadings  + "\r\n")
@@ -463,12 +467,13 @@ class KitronikRTC:
     # Set an alarm for a specific hour and minute
     # Extra options to set a periodically repeating alarm (set alarmRepeat to True and then specifiy the hour and/or minute period between alarms)
     def setAlarm(self, hour, minute, alarmRepeat=False, hourPeriod=0, minutePeriod=0):
-        self.alarmHour = hour
-        self.alarmMinute = minute
+        self.alarmHour = math.ceil(hour)
+        self.alarmMinute = math.ceil(minute)
         self.alarmRepeat = alarmRepeat
+        
         if alarmRepeat:
-            self.hourPeriod = hourPeriod
-            self.minutePeriod = minutePeriod
+            self.hourPeriod = math.ceil(hourPeriod)
+            self.minutePeriod = math.ceil(minutePeriod)
         self.alarmSet = True
 
     # Check whether the alarm conditions have been met and then trigger the alarm
