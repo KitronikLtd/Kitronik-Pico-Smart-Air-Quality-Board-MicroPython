@@ -1,6 +1,11 @@
+Other Languages: [FRANCAIS](README_FR.md)
+
 # Kitronik-Pico-Smart-Air-Quality-Board-MicroPython
+
+![Smart Quality Air de Kitronic](docs/_static/kitronik-5366.jpg)
+
 A module and sample code for the Kitronik Smart Air Quality Board for the Raspberry Pi Pico. (www.kitronik.co.uk/5336)
-  
+
 To use, save the PicoAirQuality.py file onto the Pico so it can be imported.  
 There are several classes within the module for accessing and controlling the different board features.  
 ## Import PicoAirQuality.py and construct instances of the differenet classes:
@@ -54,7 +59,9 @@ To display text (or numbers converted to strings with the 'str(*numbers*)'):
 ```python
 oled.displayText(text, line, x_offset=0)
 ```
-The text can be displayed on any of the 6 lines (1 - 6), with up to 16 characters per line. Text will default to start showing on the left edge of the screen, but by setting an 'x_offset' by a certain number of pixels it can start anywhere across the screen (the screen is 128px wide). **Note:** If the text is too long for a line, the end characters will be cut off, they will not move down to the next line.  
+The text can be displayed on any of the 6 lines (1 - 6), with up to 16 characters per line. Text will default to start showing on the left edge of the screen, but by setting an 'x_offset' by a certain number of pixels it can start anywhere across the screen (the screen is 128px wide).
+
+**Note:** If the text is too long for a line, the end characters will be cut off, they will not move down to the next line.  
 To make the text actually appear, another function needs to be called:  
 ```python
 oled.show()
@@ -65,12 +72,13 @@ This function needs to be called to make all changes visible, so must be called 
 * drawRect()
 * plot()
 * clear()
-  
+
 To draw a line from a starting (x, y) coordinate to an end (x, y) coordinate:  
 ```python
 oled.drawLine(start_x, start_y, end_x, end_y)
 ```
-**Note:** The screen is 128px wide by 64px high.
+**Note:** The screen is 128px wide by 64px height.
+
 To draw a rectangle:  
 ```python
 oled.drawRect(start_x, start_y, width, height, fill=False)
@@ -126,7 +134,7 @@ rtc.readParameter(parameter)
 * 'h' = Hour
 * 'min' = Minute
 * 's' = Second
-  
+
 Set an alarm:
 ```python
 rtc.setAlarm(hour, minute)
@@ -153,7 +161,7 @@ where:
 ```python
 COLOURS = (BLACK, RED, YELLOW, GREEN, CYAN, BLUE, PURPLE, WHITE)
 ```
-Turn off the LEDs: 
+Turn off the LEDs:
 ```python
 zipleds.clear(whichLED)
 ```
@@ -165,7 +173,7 @@ Control the brightness:
 zipleds.setBrightness(value)
 ```
 where:  
-* value => 0-100 (brightness value in %) 
+* value => 0-100 (brightness value in %)
 
 ### Make the changes visible:
 ```python
@@ -275,7 +283,7 @@ def ButtonA_IRQHandler(pin):
     oled.displayText("IAQ: " + str(bme688.getAirQualityScore()), 5)
     oled.displayText("eCO2: " + str(bme688.readeCO2()), 6)
     oled.show()
-    
+
 def ButtonB_IRQHandler(pin):
     oled.clear()
     oled.show()
@@ -285,4 +293,3 @@ def ButtonB_IRQHandler(pin):
 
 This code is designed to be used as a module.  
 See: https://kitronik.co.uk/blogs/resources/modules-micro-python-and-the-raspberry-pi-pico for more information.  
-
