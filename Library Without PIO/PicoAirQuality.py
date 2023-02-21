@@ -52,60 +52,41 @@ class KitronikOutputControl:
 
         # Servo Control
         self.servo = []
-        # Servo 0 degrees -> pulse of 0.5ms, 180 degrees 2.5ms
-        # Pulse train freq 50hz - 20ms
-        # 1us is freq of 1000000
-        # Servo pulses range from 500 to 2500us and overall pulse train is 20000us repeat.
-        # Servo is on GP2
-        self.maxServoPulse = 2500
-        self.minServoPulse = 500
-        self.pulseTrain = 20000
-        self.degreesToUS = 2000/180
-
-        # Create and start the servo statemachine
-        for i in range(8): # StateMachine range from 0 to 7
-            if usedSM[i]:
-                continue # Ignore this index if already used
-            try:
-                self.servo.append(StateMachine(i, self._servo_pwm, freq=2000000, sideset_base=Pin(2)))
-                usedSM[i] = True # Set this index to used
-                break # Have claimed the SM, can leave now
-            except ValueError:
-                pass # External resouce has SM, move on
-            if i == 7:
-                # Cannot find an unused SM
-                raise ValueError("Could not claim a StateMachine, all in use")
-        
-        self.servo[0].put(self.pulseTrain)
-        self.servo[0].exec("pull()")
-        self.servo[0].exec("mov(isr, osr)")
-        self.servo[0].put(self.minServoPulse)
         self.registerServo()
 
     # Doesn't actually register/unregister, just stops and starts the servo PIO
     # The servo is registered by default in the __init__() function - these are only required if you want to use Pin 2 for something else, and then register the servo again
     def registerServo(self):
-        if(not self.servo[0].active()):
-            self.servo[0].active(1)
+        self.servo.append(PWM(Pin(2)))
+        self.servo[0].freq(50)
+        self.servoToPosition(90)
 
     def deregisterServo(self):
-        if(self.servo[0].active()):
-            self.servo[0].active(0)
+        self.servo[0].deinit()
+        self.servo.pop()
+    
+    def scale(self, value, fromMin, fromMax, toMin, toMax):
+        return toMin + ((value - fromMin) * ((toMax - toMin) / (fromMax - fromMin)))
  
     # goToPosition takes a degree position for the servo to go to. 
     # 0degrees->180 degrees is 0->2000us, plus offset of 500uS
     # 1 degree ~ 11uS.
     # This function does the sum then calls goToPeriod to actually poke the PIO 
     def servoToPosition(self, degrees):
-        pulseLength = int(degrees*self.degreesToUS + 500)
-        self.servoToPeriod(pulseLength)
+        if degrees < 0:
+            degrees = 0
+        if degrees > 180:
+            degrees = 180
+        scaledValue = self.scale(degrees, 0, 180, 1638, 8192)
+        self.servo[0].duty_u16(int(scaledValue))
     
     def servoToPeriod(self, period):
-        if(period < 500):
+        if period < 500:
             period = 500
-        if(period >2500):
-            period =2500
-        self.servo[0].put(period)
+        if period > 2500:
+            period = 2500
+        scaledValue = self.scale(period, 500, 2500, 1638, 8192)
+        self.servo[0].duty_u16(int(scaledValue))
 
     # Functions to turn on/off the high power outputs
     # Enter the pin number, either '3' or '15'
