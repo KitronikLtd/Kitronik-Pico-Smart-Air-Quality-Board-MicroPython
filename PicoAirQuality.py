@@ -552,7 +552,7 @@ class KitronikBME688:
         self.CHIP_ADDRESS = i2cAddr    # I2C address as determined by hardware configuration
         sda = Pin(sda)
         scl = Pin(scl)
-        self.i2c = I2C(1,sda=sda, scl=scl, freq=100000)
+        self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000, timeout=100_000)
 
         # Useful BME688 Register Addresses
         # Control
@@ -1093,7 +1093,7 @@ class KitronikOLED(framebuf.FrameBuffer):
 
         sda = Pin(sda)
         scl = Pin(scl)
-        self.i2c = I2C(1,sda=sda, scl=scl, freq=100000)
+        self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000, timeout=100_000)
 
         self.plotArray = []
         self.plotYMin = 0
