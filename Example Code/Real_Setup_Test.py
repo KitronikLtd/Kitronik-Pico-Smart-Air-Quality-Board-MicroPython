@@ -60,7 +60,7 @@ bme688.calcBaselines()
 
 prong = machine.ADC(26)     # Sets up the Mini Prong input with ADC0, which is associated with GP26
 log.writeProjectInfo("User Name", "Project Name")
-log.setupDataFields("Date", "Time", "Temperature", "Pressure", "Humidity", "Soil Moisture", "IAQ", "eCO2")
+log.nameColumnHeadings("Date", "Time", "Temperature", "Pressure", "Humidity", "Soil Moisture", "IAQ", "eCO2")
 rtc.setAlarm(10, 30)     # Set an initial alarm for when the first control actions occur and data is logged
 
 while True:
