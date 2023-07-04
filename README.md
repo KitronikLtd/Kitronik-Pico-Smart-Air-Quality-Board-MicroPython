@@ -245,15 +245,22 @@ To register a servo ready to be used:
 ```python
  output.registerServo()
 ```
+
 This process sets the PIO PWM active on the servo pin (**Note:** The servo is registered by default).  
 To control the movement of a servo, turning it to a set angle (or controlling the speed/direction of a continuous rotation servo):  
 ```python
 output.servoToPosition(degrees)
 ```
+
+To control the movement of the servo we can also set it using radians from 0 to 3.1416 (Pi to four digits).
+``` python
+output.servoToRadians(radians)
+```
+
 If the pin is needed for another purpose it can be 'deregistered' which sets the PIO to inactive:  
- ```python
+```python
 output.deregisterServo()
- ```
+```
 
 ### High-Power Outputs:
 The high-power outputs on the board are controlled via two pins on the Pico: GP3 and GP15.  

@@ -61,6 +61,7 @@ class KitronikOutputControl:
         self.minServoPulse = 500
         self.pulseTrain = 20000
         self.degreesToUS = 2000/180
+        self.piEstimate = 3.1416
 
         # Create and start the servo statemachine
         for i in range(8): # StateMachine range from 0 to 7
@@ -99,6 +100,12 @@ class KitronikOutputControl:
     def servoToPosition(self, degrees):
         pulseLength = int(degrees*self.degreesToUS + 500)
         self.servoToPeriod(pulseLength)
+    
+    # Takes the angle in radians to move the servo to.
+    # 0 radians to 3.1416
+    def servoToRadians(self, radians):
+        period = int((radians / self.piEstimate) * 2000) + 500
+        self.servoToPeriod(period)
     
     def servoToPeriod(self, period):
         if(period < 500):
