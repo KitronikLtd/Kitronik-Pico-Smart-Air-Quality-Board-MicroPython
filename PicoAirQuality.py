@@ -735,7 +735,7 @@ class KitronikBME688:
     # 'targetTemp' is the desired temperature of the hot plate in degC (in range 200 to 400)
     # Note: Heating duration also needs to be specified for each heating step in 'gas_wait' registers
     def intConvertGasTargetTemp(self, ambientTemp, targetTemp):
-        var1 = ((ambientTemp * self.PAR_G3) // 1000) << 8    # Divide by 1000 as we have ambientTemp in pre-degC format (i.e. 2500 rather than 25.00 degC)
+        var1 = int((ambientTemp * self.PAR_G3) // 1000) << 8    # Divide by 1000 as we have ambientTemp in pre-degC format (i.e. 2500 rather than 25.00 degC)
         var2 = (self.PAR_G1 + 784) * (((((self.PAR_G2 + 154009) * targetTemp * 5) // 100) + 3276800) // 10)
         var3 = var1 + (var2 >> 1)
         var4 = (var3 // (self.RES_HEAT_RANGE + 4))
