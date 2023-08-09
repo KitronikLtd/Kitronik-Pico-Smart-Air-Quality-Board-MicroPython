@@ -6,6 +6,7 @@ from machine import Pin, PWM, ADC, time_pulse_us, I2C, RTC
 from rp2 import PIO, StateMachine, asm_pio
 from time import sleep, sleep_ms, sleep_us, ticks_ms, ticks_us
 from micropython import const
+from sys import implementation
 
 # Initialise the module with all outputs off
 # High Power Output Pins
@@ -559,7 +560,11 @@ class KitronikBME688:
         self.CHIP_ADDRESS = i2cAddr    # I2C address as determined by hardware configuration
         sda = Pin(sda)
         scl = Pin(scl)
-        self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000, timeout=100_000)
+        
+        if implementation._mpy >= 4358:
+            self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000, timeout=100_000)
+        else:
+            self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000)
 
         # Useful BME688 Register Addresses
         # Control
@@ -1100,7 +1105,11 @@ class KitronikOLED(framebuf.FrameBuffer):
 
         sda = Pin(sda)
         scl = Pin(scl)
-        self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000, timeout=100_000)
+        
+        if implementation._mpy >= 4358:
+            self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000, timeout=100_000)
+        else:
+            self.i2c = I2C(1, sda=sda, scl=scl, freq=100_000)
 
         self.plotArray = []
         self.plotYMin = 0
